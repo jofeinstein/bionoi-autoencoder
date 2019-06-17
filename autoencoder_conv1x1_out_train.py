@@ -79,8 +79,8 @@ if __name__ == "__main__":
     #data_mean = [0.4466, 0.1883, 0.4906]
     #data_std = [0.3202, 0.2495, 0.3589]
 
-    data_mean = [0.6095, 0.6024, 0.5253] #bae_blended_test_dataset
-    data_std = [0.0826, 0.0917, 0.0855]
+    data_mean = [0.5844, 0.6189, 0.5283] #bae_test_dataset
+    data_std = [0.0808, 0.0913, 0.0888]
 
     if normalize == True:
         print('normalizing data:')
