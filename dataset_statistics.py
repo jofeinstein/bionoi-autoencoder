@@ -11,6 +11,7 @@ import argparse
 from os import listdir
 from os.path import isfile, join
 from utils import UnsuperviseDataset
+
 def getArgs():
     parser = argparse.ArgumentParser('python')
     parser.add_argument('-data_dir',
@@ -32,14 +33,14 @@ def getArgs():
 
 def dataSetStatistics(data_dir, batch_size, num_data):
     # Detect if we have a GPU available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print('Current device: '+str(device))
+    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #print('Current device: '+str(device))
 
     transform = transforms.Compose([transforms.ToTensor()])
     img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
-    total = dataset.__len__()
-    print('length of entire dataset:', total)
+    #total = dataset.__len__()
+    #print('length of entire dataset:', total)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=16)
 
     # calculate mean and std for training data
@@ -56,8 +57,8 @@ def dataSetStatistics(data_dir, batch_size, num_data):
             break
     mean = mean / m
     std = std / m
-    print('mean:',mean)
-    print('std:',std)
+    #print('mean:',mean)
+    #print('std:',std)
     return mean, std
 
 if __name__ == "__main__":

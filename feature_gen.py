@@ -14,6 +14,7 @@ from os import listdir
 from os.path import isfile, join
 from utils import UnsuperviseDataset, ConvAutoencoder_conv1x1
 from helper import imshow
+from dataset_statistics import dataSetStatistics
 
 def getArgs():
     parser = argparse.ArgumentParser('python')
@@ -33,7 +34,12 @@ def getArgs():
     parser.add_argument('-normalize',
                         default=True,
                         required=False,
-                        help='whether to normalize dataset')                       
+                        help='whether to normalize dataset')
+    parser.add_argument('-num_data',
+                        type=int,
+                        default=50000,
+                        required=False,
+                        help='the batch size, normally 2^n.')
     return parser.parse_args()
 
 def feature_vec_gen(device, model, dataset, feature_dir):
@@ -57,6 +63,7 @@ if __name__ == "__main__":
     data_dir = args.data_dir
     feature_dir = args.feature_dir
     normalize = args.normalize
+    num_data = args.num_data
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -74,8 +81,8 @@ if __name__ == "__main__":
     #--------------------model configuration ends--------------------------
 
     # data configuration
-    data_mean = [0.6095, 0.6024, 0.5253]
-    data_std = [0.0826, 0.0917, 0.0855]
+    data_mean = dataSetStatistics(data_dir, 128, num_data)[0].tolist()
+    data_std = dataSetStatistics(data_dir, 128, num_data)[1].tolist()
     if normalize == True:
         print('normalizing data:')
         print('mean:', data_mean)
