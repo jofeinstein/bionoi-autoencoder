@@ -1,0 +1,303 @@
+Current device: cuda:0
+normalizing data:
+mean: [0.615, 0.4381, 0.645]
+std: [0.615, 0.4381, 0.645]
+shape of input: torch.Size([256, 3, 256, 256])
+Using 2 GPUs...
+paramters to train:
+module.conv1.weight
+module.conv1.bias
+module.conv2.weight
+module.conv2.bias
+module.conv3.weight
+module.conv3.bias
+module.conv4.weight
+module.conv4.bias
+module.enc_fc.weight
+module.enc_fc.bias
+module.dec_fc.weight
+module.dec_fc.bias
+module.transconv1.weight
+module.transconv1.bias
+module.transconv2.weight
+module.transconv2.bias
+module.transconv3.weight
+module.transconv3.bias
+module.transconv4.weight
+module.transconv4.bias
+ 
+Epoch 1/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.147683
+epoch complete in 14m 59s
+ 
+Epoch 2/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.106592
+epoch complete in 15m 29s
+ 
+Epoch 3/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.104370
+epoch complete in 15m 15s
+ 
+Epoch 4/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.104765
+epoch complete in 15m 16s
+ 
+Epoch 5/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.103027
+epoch complete in 15m 7s
+ 
+Epoch 6/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.103012
+epoch complete in 15m 29s
+ 
+Epoch 7/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.103877
+epoch complete in 15m 11s
+ 
+Epoch 8/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.096217
+epoch complete in 15m 14s
+ 
+Epoch 9/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.085907
+epoch complete in 15m 16s
+ 
+Epoch 10/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.085258
+epoch complete in 15m 24s
+ 
+Epoch 11/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084951
+epoch complete in 15m 23s
+ 
+Epoch 12/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084674
+epoch complete in 15m 9s
+ 
+Epoch 13/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084637
+epoch complete in 15m 19s
+ 
+Epoch 14/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084491
+epoch complete in 15m 9s
+ 
+Epoch 15/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084671
+epoch complete in 15m 4s
+ 
+Epoch 16/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084308
+epoch complete in 14m 58s
+ 
+Epoch 17/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084284
+epoch complete in 15m 0s
+ 
+Epoch 18/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084254
+epoch complete in 15m 0s
+ 
+Epoch 19/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084247
+epoch complete in 15m 13s
+ 
+Epoch 20/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084258
+epoch complete in 15m 7s
+ 
+Epoch 21/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.084165
+epoch complete in 14m 54s
+ 
+Epoch 22/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.083219
+epoch complete in 15m 19s
+ 
+Epoch 23/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.083205
+epoch complete in 15m 14s
+ 
+Epoch 24/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.083178
+epoch complete in 15m 2s
+ 
+Epoch 25/25
+---------------
+training data on batch 200
+training data on batch 400
+training data on batch 600
+training data on batch 800
+training data on batch 1000
+training data on batch 1200
+Training loss:0.083142
+epoch complete in 15m 1s
+Best training loss: 0.083142
