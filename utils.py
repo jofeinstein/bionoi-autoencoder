@@ -150,15 +150,19 @@ class ConvAutoencoder_conv1x1(nn.Module):
 		self.conv2 = nn.Conv2d(16, 32, 3, stride=1, padding=1)
 		self.conv3 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
 		self.conv4 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
-		self.conv5 = nn.Conv2d(32, 2, 1, stride=1, padding=0)
+		self.conv5 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
+		self.conv6 = nn.Conv2d(32, 32, 3, stride=1, padding=1)
+		self.conv7 = nn.Conv2d(32, 2, 1, stride=1, padding=0)
 		self.relu = nn.LeakyReLU(0.1)
 		self.tanh = nn.Tanh()
 		self.pool = nn.MaxPool2d(2, 2)
 		self.transconv1 = nn.Conv2d(2, 32, 1, stride=1, padding=0)
 		self.transconv2 = nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1)
 		self.transconv3 = nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1)
-		self.transconv4 = nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1)
-		self.transconv5 = nn.ConvTranspose2d(16, 3, 4, stride=2, padding=1)
+		self.transconv4 = nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1)
+		self.transconv5 = nn.ConvTranspose2d(32, 32, 4, stride=2, padding=1)
+		self.transconv6 = nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1)
+		self.transconv7 = nn.ConvTranspose2d(16, 3, 4, stride=2, padding=1)
 		self.sigmoid = nn.Sigmoid()
 
 	def encode(self, x):
@@ -174,7 +178,13 @@ class ConvAutoencoder_conv1x1(nn.Module):
 		x = self.conv4(x) # 32*32*32
 		x = self.relu(x)  # 32*32*32
 		x = self.pool(x)  # 32*16*16
-		x = self.conv5(x) # 2*16*16
+		x = self.conv5(x)  # 32*32*32
+		x = self.relu(x)  # 32*32*32
+		x = self.pool(x)  # 32*16*16
+		x = self.conv6(x)  # 32*32*32
+		x = self.relu(x)  # 32*32*32
+		x = self.pool(x)  # 32*16*16
+		x = self.conv7(x) # 2*16*16
 		x = self.tanh(x)  # 2*16*16
 		#print(x.size())
 		return x
@@ -188,7 +198,11 @@ class ConvAutoencoder_conv1x1(nn.Module):
 		x = self.relu(x)	   # 32*64*64
 		x = self.transconv4(x) # 16*128*128
 		x = self.relu(x)	   # 16*128*128
-		x = self.transconv5(x) # 3*256*256
+		x = self.transconv5(x)  # 16*128*128
+		x = self.relu(x)  # 16*128*128
+		x = self.transconv6(x)  # 16*128*128
+		x = self.relu(x)  # 16*128*128
+		x = self.transconv7(x) # 3*256*256
 		x = self.sigmoid(x)    # 3*256*256
 		#print(x.size())
 		return x
