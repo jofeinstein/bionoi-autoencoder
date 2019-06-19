@@ -40,6 +40,14 @@ def getArgs():
                         default=50000,
                         required=False,
                         help='the batch size, normally 2^n.')
+    parser.add_argument('-model',
+                        default=ConvAutoencoder_conv1x1(),
+                        required=False,
+                        help='the model of autoencoder to generate feature vectors with')
+    parser.add_argument('-model_file',
+                        default='./log/conv_1x1.pt',
+                        required=False,
+                        help='directory of trained model')
     return parser.parse_args()
 
 def feature_vec_gen(device, model, dataset, feature_dir):
@@ -64,14 +72,14 @@ if __name__ == "__main__":
     feature_dir = args.feature_dir
     normalize = args.normalize
     num_data = args.num_data
+    model = args.model
+    model_file = args.model_file
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Current device: '+str(device))   
 
-    # model configuration
-    model = ConvAutoencoder_conv1x1()
-    model_file = './log/conv1x1norm.pt'
+
     # if there are multiple GPUs, split a batch to different GPUs
     if torch.cuda.device_count() > 1:
         print("Using "+str(torch.cuda.device_count())+" GPUs...")
