@@ -78,8 +78,9 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Current device: '+str(device))
 
-    data_mean = dataSetStatistics(data_dir, 128, num_data)[0].tolist()
-    data_std = dataSetStatistics(data_dir, 128, num_data)[1].tolist()
+    statistics = dataSetStatistics(data_dir, 128, num_data)
+    data_mean = statistics[0].tolist()
+    data_std = statistics[1].tolist()
 
     if normalize == True:
         print('normalizing data:')

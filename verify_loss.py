@@ -18,6 +18,7 @@ from utils import DenseAutoencoder
 from utils import ConvAutoencoder
 from utils import ConvAutoencoder_dense_out
 from utils import ConvAutoencoder_conv1x1
+from dataset_statistics import dataSetStatistics
 
 def getArgs():
     parser = argparse.ArgumentParser('python')
@@ -39,6 +40,11 @@ def getArgs():
                         default=True,
                         required=False,
                         help='whether to normalize dataset')
+    parser.add_argument('-num_data',
+                        type=int,
+                        default=50000,
+                        required=False,
+                        help='the batch size, normally 2^n.')
     return parser.parse_args()
 
 
@@ -48,6 +54,7 @@ if __name__ == "__main__":
     style = args.style
     feature_size = args.feature_size
     normalize = args.normalize
+    num_data = args.num_data
     batch_size = 1
 
     if style == 'conv':
@@ -79,8 +86,10 @@ if __name__ == "__main__":
         model = nn.DataParallel(model)
     model.load_state_dict(torch.load(model_file))
 
-    data_mean = [0.6095, 0.6024, 0.5253]
-    data_std = [0.0826, 0.0917, 0.0855]
+    statistics = dataSetStatistics(data_dir, 128, num_data)
+    data_mean = statistics[0].tolist()
+    data_std = statistics[1].tolist()
+
     if normalize == True:
         print('normalizing data:')
         print('mean:', data_mean)
