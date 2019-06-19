@@ -14,8 +14,13 @@ import os.path
 from os import listdir
 from os.path import isfile, join
 import matplotlib.pyplot as plt
-from utils import UnsuperviseDataset, ConvAutoencoder_conv1x1, train, ConvAutoencoder, \
-    ConvAutoencoder_dense_out, DenseAutoencoder, ConvAutoencoder_deeper1, ConvAutoencoder_conv1x1_layertest
+from utils import UnsuperviseDataset, train
+from utils import DenseAutoencoder
+from utils import ConvAutoencoder
+from utils import ConvAutoencoder_dense_out
+from utils import ConvAutoencoder_conv1x1
+from utils import ConvAutoencoder_conv1x1_layertest
+from utils import ConvAutoencoder_deeper1
 from helper import imshow, list_plot
 from dataset_statistics import dataSetStatistics
 

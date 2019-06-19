@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from torch import nn
 from os import listdir
+import os.path
 from os.path import isfile, join
 from utils import UnsuperviseDataset, inference
 from helper import imshow
@@ -17,6 +18,9 @@ from utils import DenseAutoencoder
 from utils import ConvAutoencoder
 from utils import ConvAutoencoder_dense_out
 from utils import ConvAutoencoder_conv1x1
+from utils import ConvAutoencoder_conv1x1_layertest
+from utils import ConvAutoencoder_deeper1
+from dataset_statistics import dataSetStatistics
 
 def getArgs():
     parser = argparse.ArgumentParser('python')
@@ -32,7 +36,7 @@ def getArgs():
     parser.add_argument('-style',
                         default='conv_1x1',
                         required=False,
-                        choices=['conv', 'dense', 'conv_dense_out', 'conv_1x1'],
+                        choices=['conv', 'dense', 'conv_dense_out', 'conv_1x1', 'conv_deeper', 'conv_1x1_test'],
                         help='style of autoencoder')
     parser.add_argument('-feature_size',
                         default=1024,
@@ -42,7 +46,20 @@ def getArgs():
     parser.add_argument('-normalize',
                         default=True,
                         required=False,
-                        help='whether to normalize dataset')                       
+                        help='whether to normalize dataset')
+    parser.add_argument('-model',
+                        default='./log/conv_1x1.pt',
+                        required=False,
+                        help='trained model location')
+    parser.add_argument('-num_data',
+                        type=int,
+                        default=50000,
+                        required=False,
+                        help='the batch size, normally 2^n.')
+    parser.add_argument('-gpu_to_cpu',
+                        default=False,
+                        required=False,
+                        help='whether to reconstruct image using model made with gpu on a cpu')
     return parser.parse_args()
 
 
@@ -53,26 +70,16 @@ if __name__ == "__main__":
     style = args.style
     feature_size = args.feature_size
     normalize = args.normalize
-
-    if style == 'conv':
-        model_file = '../trained_model/bionoi_autoencoder_conv.pt'
-    elif style == 'dense':
-        model_file = '../trained_model/bionoi_autoencoder_dense.pt'
-    elif style == 'conv_dense_out':
-        model_file = './log_ConvAutoencoder_dense_out_adam/bionoi_autoencoder_conv.pt'
-    elif style == 'conv_1x1':
-        model_file = './log/conv1x1batch64.pt'
-    
+    model_file = args.model
+    num_data = args.num_data
+    gpu_to_cpu = args.gpu_to_cpu
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print('Current device: '+str(device))   
+    print('Current device: '+str(device))
 
-    #data_mean = [0.4466, 0.1883, 0.4906] #bionoi test dataset
-    #data_std = [0.3202, 0.2495, 0.3589]
-
-    data_mean = [0.6095, 0.6024, 0.5253] #bae_blended_test_dataset
-    data_std = [0.0826, 0.0917, 0.0855]
+    data_mean = dataSetStatistics(data_dir, 128, num_data)[0].tolist()
+    data_std = dataSetStatistics(data_dir, 128, num_data)[1].tolist()
 
     if normalize == True:
         print('normalizing data:')
@@ -104,31 +111,37 @@ if __name__ == "__main__":
         model = ConvAutoencoder_dense_out(feature_size)
     elif style == 'conv_1x1':
         model = ConvAutoencoder_conv1x1()
-
-    # if there are multiple GPUs, split the batch to different GPUs
-    if torch.cuda.device_count() > 1:
-        print("Using "+str(torch.cuda.device_count())+" GPUs...")
-        model = nn.DataParallel(model)
-    model.load_state_dict(torch.load(model_file))
+    elif style == 'conv_1x1_test':
+        model = ConvAutoencoder_conv1x1_layertest()
+    elif style == 'conv_deeper':
+        model = ConvAutoencoder_deeper1()
 
 
-    '''# original saved file with DataParallel
-    state_dict = torch.load(model_file, map_location='cpu')
-    # create new OrderedDict that does not contain `module.`
-    from collections import OrderedDict
+    if gpu_to_cpu == False:
+        # if there are multiple GPUs, split the batch to different GPUs
+        if torch.cuda.device_count() > 1:
+            print("Using "+str(torch.cuda.device_count())+" GPUs...")
+            model = nn.DataParallel(model)
+        model.load_state_dict(torch.load(model_file))
 
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        name = k[7:]  # remove `module.`
-        new_state_dict[name] = v
-    # load params
-    model.load_state_dict(new_state_dict)'''
+    elif gpu_to_cpu == True:
+        # original saved file with DataParallel
+        state_dict = torch.load(model_file, map_location='cpu')
+        # create new OrderedDict that does not contain `module.`
+        from collections import OrderedDict
+
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k[7:]  # remove `module.`
+            new_state_dict[name] = v
+        # load params
+        model.load_state_dict(new_state_dict)
 
 
     # get the reconstructed image
     reconstruct_image = inference(device, image.unsqueeze(0), model)
     print('shape of reconstructed image:', reconstruct_image.shape)
-    #print(reconstruct_image)
+    # print(reconstruct_image)
 
     # measure the loss between the 2 images
     criterion = nn.MSELoss()
@@ -142,7 +155,8 @@ if __name__ == "__main__":
     ax2.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(),(1,2,0)))
     ax2.set_title('Reconstructed Image')
     # show both figures
-    #plt.savefig('./images/'+str(opMode)+'_'+str(imgClass)+str(index)+'.png')
+    base = os.path.splitext(model_file)[0]
+    # plt.savefig('./images/' + style + '_reconstruction' + '.png')
     plt.figure()
     plt.imshow(np.transpose(image.numpy(), (1,2,0)))
     plt.figure()

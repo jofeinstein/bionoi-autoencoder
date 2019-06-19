@@ -39,8 +39,8 @@ def dataSetStatistics(data_dir, batch_size, num_data):
     transform = transforms.Compose([transforms.ToTensor()])
     img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
-    #total = dataset.__len__()
-    #print('length of entire dataset:', total)
+    total = dataset.__len__()
+    print('length of entire dataset:', total)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=16)
 
     # calculate mean and std for training data
