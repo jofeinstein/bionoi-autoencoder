@@ -134,6 +134,7 @@ if __name__ == "__main__":
 
 
     reconstruction_lst = []
+    print('forming reconstruction images')
     for i in range(dataset.__len__()):
         image, file_name = dataset[i]
         reconstruct_image = inference(device, image.unsqueeze(0), model)
@@ -144,6 +145,7 @@ if __name__ == "__main__":
         reconstruction_lst.append(recon_numpy)
 
     original_lst = []
+    print('extracting original images')
     for tensor_name_tuple in dataset:
         og_img = tensor_name_tuple[0].numpy()
         original_lst.append(og_img)
@@ -165,6 +167,7 @@ if __name__ == "__main__":
 
 
     # plot images before and after reconstruction
+    print('constructing figures')
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
     ax1.imshow(np.transpose(original_lst[0], (1, 2, 0)))
     ax1.set_title('Original Normalized Image  —  ' + file_name)
