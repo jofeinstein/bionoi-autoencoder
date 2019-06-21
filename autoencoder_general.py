@@ -136,8 +136,8 @@ if __name__ == "__main__":
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=32)
 
         # get some random training images to show
-        dataiter = iter(dataloader)
-        images, filename = dataiter.next()
+        #dataiter = iter(dataloader)
+        #images, filename = dataiter.next()
 
         # print(images.shape)
         # imshow(torchvision.utils.make_grid(images))
@@ -145,8 +145,8 @@ if __name__ == "__main__":
         # images = torch.reshape(images,(images.size(0),3,256,256))
         # imshow(torchvision.utils.make_grid(images))
 
-        image_shape = images.shape
-        print('shape of input:', image_shape)
+        #image_shape = images.shape
+        #print('shape of input:', image_shape)
 
         # instantiate model
         model = ConvAutoencoder_conv1x1()
@@ -189,8 +189,8 @@ if __name__ == "__main__":
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=32)
 
         # get some random training images to show
-        dataiter = iter(dataloader)
-        images, filename = dataiter.next()
+        #dataiter = iter(dataloader)
+        #images, filename = dataiter.next()
 
         # print(images.shape)
         # imshow(torchvision.utils.make_grid(images))
@@ -198,8 +198,8 @@ if __name__ == "__main__":
         # images = torch.reshape(images,(images.size(0),3,256,256))
         # imshow(torchvision.utils.make_grid(images))
 
-        image_shape = images.shape
-        print('shape of input:', image_shape)
+        #image_shape = images.shape
+        #print('shape of input:', image_shape)
 
         # instantiate model
         model = ConvAutoencoder_conv1x1_layertest()
