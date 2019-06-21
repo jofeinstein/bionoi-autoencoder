@@ -154,6 +154,7 @@ if __name__ == "__main__":
     for dim in original_lst[0].shape:
         N *= dim
 
+    print('Calculating root mean squared error...')
     rmse_lst = []
     for i in range(len(original_lst)):
         RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)
