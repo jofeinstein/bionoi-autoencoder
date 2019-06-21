@@ -138,7 +138,8 @@ if __name__ == "__main__":
         image, file_name = dataset[i]
         reconstruct_image = inference(device, image.unsqueeze(0), model)
         recon_detach = reconstruct_image.detach()
-        recon_numpy = recon_detach.numpy()
+        recon_cpu = recon_detach.cpu()
+        recon_numpy = recon_cpu.numpy()
         recon_numpy = np.squeeze(recon_numpy, axis=0)
         reconstruction_lst.append(recon_numpy)
 
