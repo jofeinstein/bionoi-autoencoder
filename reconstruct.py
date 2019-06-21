@@ -89,7 +89,8 @@ if __name__ == "__main__":
 
 
     # Detect if we have a GPU available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
     print('Current device: '+str(device))
 
     # Normalizing data and transforming images to tensors
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     # Loading the trained model
     # Converting the trained model if trained to be usable on the cpu
     # if gpu is unavailable and the model was trained using gpus
-    if torch.cuda.is_available() is False and gpu_to_cpu is True:
+    if gpu_to_cpu == True:
         # original saved file with DataParallel
         state_dict = torch.load(model_file, map_location='cpu')
         # create new OrderedDict that does not contain `module.`
@@ -152,7 +153,7 @@ if __name__ == "__main__":
 
 
     # Reconstructing images and plotting the root mean square error
-    if rmse_bool is True:
+    if rmse_bool == True:
         reconstruction_lst = []
         print('Forming reconstruction images...')
         for i in range(dataset.__len__()):
@@ -161,7 +162,7 @@ if __name__ == "__main__":
             recon_detach = reconstruct_image.detach()
             recon_cpu = recon_detach.cpu()
             recon_numpy = recon_cpu.numpy()     # convert image to numpy array for easier calculations
-            recon_numpy = np.squeeze(recon_numpy, axis=0)   # remove first dimension of array (1,3,256,256) -> (3,256,256)
+            recon_numpy = np.squeeze(recon_numpy, axis=0)   # remove first dimension of array i.e. (1,3,256,256) -> (3,256,256)
             reconstruction_lst.append(recon_numpy)
 
         original_lst = []
@@ -200,6 +201,7 @@ if __name__ == "__main__":
         random_index_lst = []
         for i in range(img_count):
             random_index_lst.append(random.randint(0, dataset.__len__()-1))
+
 
         for index in random_index_lst:
             fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))

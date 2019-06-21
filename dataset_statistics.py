@@ -9,7 +9,7 @@ import torch.utils.data
 import copy
 import argparse
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset
 
 def getArgs():
@@ -37,7 +37,18 @@ def dataSetStatistics(data_dir, batch_size, num_data):
     #print('Current device: '+str(device))
 
     transform = transforms.Compose([transforms.ToTensor()])
-    img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+    #img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+
+    img_list = []
+    for item in listdir(data_dir):
+        if isfile(join(data_dir, item)):
+            img_list.append(item)
+        elif isdir(join(data_dir, item)):
+            update_data_dir = join(data_dir, item)
+            for f in listdir(update_data_dir):
+                if isfile(join(update_data_dir, f)):
+                    img_list.append(f)
+
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
     total = dataset.__len__()
     print('length of entire dataset:', total)
@@ -60,7 +71,7 @@ def dataSetStatistics(data_dir, batch_size, num_data):
     #print('mean:',mean)
     #print('std:',std)
     return mean, std
-
+print(dataSetStatistics('/home/jfeinst/Projects/bionoi_autoencoder_modified/test/',128,50000))
 if __name__ == "__main__":
     args = getArgs()
     data_dir = args.data_dir

@@ -12,7 +12,7 @@ import pickle
 import utils
 import os.path
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 import matplotlib.pyplot as plt
 from utils import UnsuperviseDataset, train
 from utils import DenseAutoencoder
@@ -115,8 +115,20 @@ if __name__ == "__main__":
         transform = transforms.Compose([transforms.ToTensor()])
 
     # put images into dataset
-    img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+    #img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+
+    img_list = []
+    for item in listdir(data_dir):
+        if isfile(join(data_dir, item)):
+            img_list.append(item)
+        elif isdir(join(data_dir, item)):
+            update_data_dir = join(data_dir, item)
+            for f in listdir(update_data_dir):
+                if isfile(join(update_data_dir, f)):
+                    img_list.append(f)
+
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
+
 
     if style == 'conv_1x1':
 
@@ -169,6 +181,7 @@ if __name__ == "__main__":
         learningRateScheduler = optim.lr_scheduler.MultiStepLR(optimizer,
                                                                milestones=[10, 20],
                                                                gamma=0.5)
+
 
     elif style == 'conv_1x1_test':
 
