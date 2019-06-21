@@ -91,17 +91,11 @@ if __name__ == "__main__":
                                                              (data_std[0], data_std[1], data_std[2]))])
     else:
         transform = transforms.Compose([transforms.ToTensor()])
-	
+
     # put images into dataset
     img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
-    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
-    image, file_name = dataset[index]
-    # calulate the input size (flattened)
-    print('name of input:', file_name)
-    image_shape = image.shape
-    print('shape of input:', image_shape)
-    input_size = image_shape[0]*image_shape[1]*image_shape[2]
-    print('flattened input size:',input_size) 
+    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
+
 
     # instantiate and load model
     if style == 'conv':
@@ -139,28 +133,51 @@ if __name__ == "__main__":
         model.load_state_dict(new_state_dict)
 
 
-    # get the reconstructed image
-    reconstruct_image = inference(device, image.unsqueeze(0), model)
-    print('shape of reconstructed image:', reconstruct_image.shape)
-    # print(reconstruct_image)
+    reconstruction_lst = []
+    for i in range(dataset.__len__()):
+        image, file_name = dataset[i]
+        reconstruct_image = inference(device, image.unsqueeze(0), model)
+        recon_detach = reconstruct_image.detach()
+        recon_numpy = recon_detach.numpy()
+        recon_numpy = np.squeeze(recon_numpy, axis=0)
+        reconstruction_lst.append(recon_numpy)
 
-    # measure the loss between the 2 images
+    original_lst = []
+    for tensor_name_tuple in dataset:
+        og_img = tensor_name_tuple[0].numpy()
+        original_lst.append(og_img)
+
+    N = 1
+    for dim in original_lst[0].shape:
+        N *= dim
+
+    rmse_lst = []
+    for i in range(len(original_lst)):
+        RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)
+        rmse_lst.append(RMSE)
+
+
+    '''# measure the loss between the 2 images
     criterion = nn.MSELoss()
     loss = criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu())
-    print('loss between before and after:', loss)
+    print('loss between before and after:', loss)'''
+
 
     # plot images before and after reconstruction
-    fig, (ax1, ax2) = plt.subplots(nrows=1,ncols=2,figsize=(14, 7))
-    ax1.imshow(np.transpose(image.numpy(), (1,2,0)))
-    ax1.set_title('Original Image')
-    ax2.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(),(1,2,0)))
-    ax2.set_title('Reconstructed Image')
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
+    ax1.imshow(np.transpose(original_lst[0], (1, 2, 0)))
+    ax1.set_title('Original Normalized Image  —  ' + file_name)
+    ax2.imshow(np.transpose(reconstruction_lst[0], (1, 2, 0)))
+    ax2.set_title('Reconstructed Image  —  ' + file_name)
     # show both figures
-    base = os.path.splitext(model_file)[0]
-    # plt.savefig('./images/' + style + '_reconstruction' + '.png')
-    plt.figure()
-    plt.imshow(np.transpose(image.numpy(), (1,2,0)))
-    plt.figure()
-    plt.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(),(1,2,0)))
-    
+    plt.savefig('./images/' + 'reconstructed_' + file_name.split('.')[0] + '.png')
+    plt.imshow(np.transpose(original_lst[0], (1, 2, 0)))
+    plt.imshow(np.transpose(reconstruction_lst[0], (1, 2, 0)))
+    plt.show()
+
+    plt.hist(np.asarray(rmse_lst), bins=30)
+    plt.ylabel('Number of Image Pairs')
+    plt.xlabel('Root Mean Squared')
+    plt.title('RMSE  —  ' + file_name)
+    plt.savefig('./images/' + file_name.split('.')[0] + 'rmse.png')
     plt.show()
