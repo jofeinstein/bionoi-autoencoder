@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
 
     reconstruction_lst = []
-    print('forming reconstruction images')
+    print('Forming reconstruction images...')
     for i in range(dataset.__len__()):
         image, file_name = dataset[i]
         reconstruct_image = inference(device, image.unsqueeze(0), model)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         reconstruction_lst.append(recon_numpy)
 
     original_lst = []
-    print('extracting original images')
+    print('Extracting original images...')
     for tensor_name_tuple in dataset:
         og_img = tensor_name_tuple[0].numpy()
         original_lst.append(og_img)
