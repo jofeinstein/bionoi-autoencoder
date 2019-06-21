@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from torch import nn
 from os import listdir
+import random
 import os.path
 from os.path import isfile, join
 from utils import UnsuperviseDataset, inference
@@ -60,6 +61,11 @@ def getArgs():
                         default=False,
                         required=False,
                         help='whether to reconstruct image using model made with gpu on a cpu')
+    parser.add_argument('-rmse',
+                        default=False,
+                        required=False,
+                        help='whether to calculate root mean squared error between reconstructed images and '
+                             'original images')
     return parser.parse_args()
 
 
@@ -73,6 +79,7 @@ if __name__ == "__main__":
     model_file = args.model
     num_data = args.num_data
     gpu_to_cpu = args.gpu_to_cpu
+    rmse_bool = args.rmse
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -112,14 +119,10 @@ if __name__ == "__main__":
         model = ConvAutoencoder_deeper1()
 
 
-    if gpu_to_cpu == False:
-        # if there are multiple GPUs, split the batch to different GPUs
-        if torch.cuda.device_count() > 1:
-            print("Using "+str(torch.cuda.device_count())+" GPUs...")
-            model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(model_file))
-
-    elif gpu_to_cpu == True:
+    # Loading the trained model
+    # Converting the trained model if trained to be usable on the cpu
+    # if gpu is unavailable and the model was trained using gpus
+    if torch.cuda.is_available() is False and gpu_to_cpu is True:
         # original saved file with DataParallel
         state_dict = torch.load(model_file, map_location='cpu')
         # create new OrderedDict that does not contain `module.`
@@ -132,57 +135,96 @@ if __name__ == "__main__":
         # load params
         model.load_state_dict(new_state_dict)
 
+    else:
+        # if there are multiple GPUs, split the batch to different GPUs
+        if torch.cuda.device_count() > 1:
+            print("Using "+str(torch.cuda.device_count())+" GPUs...")
+            model = nn.DataParallel(model)
+        model.load_state_dict(torch.load(model_file))
 
-    reconstruction_lst = []
-    print('Forming reconstruction images...')
-    for i in range(dataset.__len__()):
-        image, file_name = dataset[i]
+
+    if rmse_bool is True:
+        reconstruction_lst = []
+        print('Forming reconstruction images...')
+        for i in range(dataset.__len__()):
+            image, file_name = dataset[i]
+            reconstruct_image = inference(device, image.unsqueeze(0), model)
+            recon_detach = reconstruct_image.detach()
+            recon_cpu = recon_detach.cpu()
+            recon_numpy = recon_cpu.numpy()
+            recon_numpy = np.squeeze(recon_numpy, axis=0)
+            reconstruction_lst.append(recon_numpy)
+
+        original_lst = []
+        print('Extracting original images...')
+        for tensor_name_tuple in dataset:
+            og_img = tensor_name_tuple[0].numpy()
+            original_lst.append(og_img)
+
+        N = 1
+        for dim in original_lst[0].shape:
+            N *= dim
+
+        print('Calculating root mean squared error...')
+        rmse_lst = []
+        for i in range(len(original_lst)):
+            RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)
+            rmse_lst.append(RMSE)
+
+
+        # Plot images before and after reconstruction
+        print('constructing figures')
+
+        random_index_lst = []
+        for i in range(10):
+            random_index_lst.append(random.randint(range(dataset.__len__())))
+        for index in random_index_lst:
+            fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
+            ax1.imshow(np.transpose(original_lst[index], (1, 2, 0)))
+            ax1.set_title('Original Normalized Image  —  ' + file_name)
+            ax2.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
+            ax2.set_title('Reconstructed Image  —  ' + file_name)
+            # show both figures
+            plt.savefig('./images/' + 'reconstructed_' + file_name.split('.')[0] + '.png')
+            plt.imshow(np.transpose(original_lst[index], (1, 2, 0)))
+            plt.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
+            # plt.show()
+
+        # Plot histogram of root mean squared errors between reconstructed images and original images
+        plt.hist(np.asarray(rmse_lst), bins=30)
+        plt.ylabel('Number of Image Pairs')
+        plt.xlabel('Root Mean Squared')
+        plt.title('RMSE  —  ' + file_name)
+        plt.savefig('./images/' + file_name.split('.')[0] + 'rmse.png')
+        # plt.show()
+
+    else:
+        image, file_name = dataset[index]
+        # calulate the input size (flattened)
+        print('name of input:', file_name)
+        image_shape = image.shape
+        print('shape of input:', image_shape)
+        input_size = image_shape[0] * image_shape[1] * image_shape[2]
+        print('flattened input size:', input_size)
+
+        # Get the reconstructed image
         reconstruct_image = inference(device, image.unsqueeze(0), model)
-        recon_detach = reconstruct_image.detach()
-        recon_cpu = recon_detach.cpu()
-        recon_numpy = recon_cpu.numpy()
-        recon_numpy = np.squeeze(recon_numpy, axis=0)
-        reconstruction_lst.append(recon_numpy)
+        print('shape of reconstructed image:', reconstruct_image.shape)
+        # print(reconstruct_image)
 
-    original_lst = []
-    print('Extracting original images...')
-    for tensor_name_tuple in dataset:
-        og_img = tensor_name_tuple[0].numpy()
-        original_lst.append(og_img)
+        # Measure the loss between the 2 images
+        criterion = nn.MSELoss()
+        loss = criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu())
+        print('loss between before and after:', loss)
 
-    N = 1
-    for dim in original_lst[0].shape:
-        N *= dim
-
-    print('Calculating root mean squared error...')
-    rmse_lst = []
-    for i in range(len(original_lst)):
-        RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)
-        rmse_lst.append(RMSE)
-
-
-    '''# measure the loss between the 2 images
-    criterion = nn.MSELoss()
-    loss = criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu())
-    print('loss between before and after:', loss)'''
-
-
-    # plot images before and after reconstruction
-    print('constructing figures')
-    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
-    ax1.imshow(np.transpose(original_lst[0], (1, 2, 0)))
-    ax1.set_title('Original Normalized Image  —  ' + file_name)
-    ax2.imshow(np.transpose(reconstruction_lst[0], (1, 2, 0)))
-    ax2.set_title('Reconstructed Image  —  ' + file_name)
-    # show both figures
-    plt.savefig('./images/' + 'reconstructed_' + file_name.split('.')[0] + '.png')
-    plt.imshow(np.transpose(original_lst[0], (1, 2, 0)))
-    plt.imshow(np.transpose(reconstruction_lst[0], (1, 2, 0)))
-    plt.show()
-
-    plt.hist(np.asarray(rmse_lst), bins=30)
-    plt.ylabel('Number of Image Pairs')
-    plt.xlabel('Root Mean Squared')
-    plt.title('RMSE  —  ' + file_name)
-    plt.savefig('./images/' + file_name.split('.')[0] + 'rmse.png')
-    plt.show()
+        # plot images before and after reconstruction
+        fig, (ax1, ax2) = plt.subplots(nrows=1,ncols=2,figsize=(14, 7))
+        ax1.imshow(np.transpose(image.numpy(), (1,2,0)))
+        ax1.set_title('Original Image  —  ' + file_name)
+        ax2.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(),(1,2,0)))
+        ax2.set_title('Reconstructed Image  —  ' + file_name)
+        # show both figures
+        # plt.savefig('./images/'+str(opMode)+'_'+str(imgClass)+str(index)+'.png')
+        plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))
+        plt.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(), (1, 2, 0)))
+        #plt.show()
