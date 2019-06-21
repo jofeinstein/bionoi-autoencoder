@@ -62,7 +62,7 @@ def getArgs():
                         required=False,
                         help='whether to reconstruct image using model made with gpu on a cpu')
     parser.add_argument('-rmse',
-                        default=False,
+                        default=True,
                         required=False,
                         help='whether to calculate root mean squared error between reconstructed images and '
                              'original images')
@@ -80,6 +80,7 @@ if __name__ == "__main__":
     num_data = args.num_data
     gpu_to_cpu = args.gpu_to_cpu
     rmse_bool = args.rmse
+
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -143,62 +144,65 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(model_file))
 
 
-    if rmse_bool is True:
-        reconstruction_lst = []
-        print('Forming reconstruction images...')
-        for i in range(dataset.__len__()):
-            image, file_name = dataset[i]
-            reconstruct_image = inference(device, image.unsqueeze(0), model)
-            recon_detach = reconstruct_image.detach()
-            recon_cpu = recon_detach.cpu()
-            recon_numpy = recon_cpu.numpy()
-            recon_numpy = np.squeeze(recon_numpy, axis=0)
-            reconstruction_lst.append(recon_numpy)
+    reconstruction_lst = []
+    print('Forming reconstruction images...')
+    for i in range(dataset.__len__()):
+        image, name = dataset[i]
+        reconstruct_image = inference(device, image.unsqueeze(0), model)
+        recon_detach = reconstruct_image.detach()
+        recon_cpu = recon_detach.cpu()
+        recon_numpy = recon_cpu.numpy()
+        recon_numpy = np.squeeze(recon_numpy, axis=0)
+        reconstruction_lst.append(recon_numpy)
 
-        original_lst = []
-        print('Extracting original images...')
-        for tensor_name_tuple in dataset:
-            og_img = tensor_name_tuple[0].numpy()
-            original_lst.append(og_img)
+    original_lst = []
+    file_name_lst = []
+    print('Extracting original images...')
+    for tensor_name_tuple in dataset:
+        og_img = tensor_name_tuple[0].numpy()
+        original_lst.append(og_img)
+        file_name = tensor_name_tuple[1]
+        file_name_lst.append(file_name)
 
-        N = 1
-        for dim in original_lst[0].shape:
-            N *= dim
+    N = 1
+    for dim in original_lst[0].shape:
+        N *= dim
 
-        print('Calculating root mean squared error...')
-        rmse_lst = []
-        for i in range(len(original_lst)):
-            RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)
-            rmse_lst.append(RMSE)
+    print('Calculating root mean squared error...')
+    rmse_lst = []
+    for i in range(len(original_lst)):
+        RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)
+        rmse_lst.append(RMSE)
 
+    # Plot histogram of root mean squared errors between reconstructed images and original images
+    plt.hist(np.asarray(rmse_lst), bins=30)
+    plt.ylabel('Number of Image Pairs')
+    plt.xlabel('Root Mean Squared')
+    plt.title('RMSE  —  ' + model_file)
+    plt.savefig('./images/' + 'rmse.png')
+    # plt.show()
 
-        # Plot images before and after reconstruction
-        print('constructing figures')
-
-        random_index_lst = []
-        for i in range(10):
-            random_index_lst.append(random.randint(range(dataset.__len__())))
-        for index in random_index_lst:
-            fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
-            ax1.imshow(np.transpose(original_lst[index], (1, 2, 0)))
-            ax1.set_title('Original Normalized Image  —  ' + file_name)
-            ax2.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
-            ax2.set_title('Reconstructed Image  —  ' + file_name)
-            # show both figures
-            plt.savefig('./images/' + 'reconstructed_' + file_name.split('.')[0] + '.png')
-            plt.imshow(np.transpose(original_lst[index], (1, 2, 0)))
-            plt.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
-            # plt.show()
-
-        # Plot histogram of root mean squared errors between reconstructed images and original images
-        plt.hist(np.asarray(rmse_lst), bins=30)
-        plt.ylabel('Number of Image Pairs')
-        plt.xlabel('Root Mean Squared')
-        plt.title('RMSE  —  ' + file_name)
-        plt.savefig('./images/' + file_name.split('.')[0] + 'rmse.png')
+    # Plot images before and after reconstruction
+    print('constructing figures')
+    random_index_lst = []
+    for i in range(10):
+        random_index_lst.append(random.randint(0,dataset.__len__()-1))
+    print(random_index_lst)
+    for index in random_index_lst:
+        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
+        ax1.imshow(np.transpose(original_lst[index], (1, 2, 0)))
+        ax1.set_title('Original Normalized Image  —  ' + file_name_lst[index])
+        ax2.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
+        ax2.set_title('Reconstructed Image  —  ' + file_name_lst[index])
+        # show both figures
+        plt.savefig('./images/' + 'reconstructed_' + file_name_lst[index].split('.')[0] + '.png')
+        plt.imshow(np.transpose(original_lst[index], (1, 2, 0)))
+        plt.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
         # plt.show()
 
-    else:
+
+
+    '''else:
         image, file_name = dataset[index]
         # calulate the input size (flattened)
         print('name of input:', file_name)
@@ -227,4 +231,4 @@ if __name__ == "__main__":
         # plt.savefig('./images/'+str(opMode)+'_'+str(imgClass)+str(index)+'.png')
         plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))
         plt.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(), (1, 2, 0)))
-        #plt.show()
+        #plt.show()'''
