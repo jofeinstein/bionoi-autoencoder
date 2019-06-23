@@ -26,6 +26,7 @@
 
 10. python autoencoder_general.py -data_dir /work/jfeins1/bae-test-122k/ -model_file ./log/conv1x1-120k-batch512.pt -style conv_1x1 -batch_size 512
     * the command to run the autoencoder file. 
+    * python reconstruct.py -data_dir /work/jfeins1/bae-test-122k/ -model /work/jfeins1/bionoi_autoencoder_modified/log/conv1x1-120k.pt -style conv_1x1
     
 ***You must have a .condarc file in your home directory with the paths to your anaconda environments and packages.  Note that .condarc is a hidden file. Must be formatted as below.
 ```

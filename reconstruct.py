@@ -83,8 +83,8 @@ if __name__ == "__main__":
 
 
 # Detect if we have a GPU available
-#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cpu")
 print('Current device: '+str(device))
 
 # Normalizing data and transforming images to tensors
