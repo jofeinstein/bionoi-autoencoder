@@ -61,11 +61,6 @@ def getArgs():
                         default=False,
                         required=False,
                         help='whether to reconstruct image using model made with gpu on a cpu')
-    parser.add_argument('-rmse',
-                        default=True,
-                        required=False,
-                        help='whether to calculate root mean squared error between reconstructed images and '
-                             'original images')
     parser.add_argument('-img_count',
                         type=int,
                         default=10,
@@ -84,171 +79,161 @@ if __name__ == "__main__":
     model_file = args.model
     num_data = args.num_data
     gpu_to_cpu = args.gpu_to_cpu
-    rmse_bool = args.rmse
     img_count = args.img_count
 
 
-    # Detect if we have a GPU available
-    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
-    print('Current device: '+str(device))
+# Detect if we have a GPU available
+#device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
+print('Current device: '+str(device))
 
-    # Normalizing data and transforming images to tensors
-    statistics = dataSetStatistics(data_dir, 128, num_data)
-    data_mean = statistics[0].tolist()
-    data_std = statistics[1].tolist()
+# Normalizing data and transforming images to tensors
+statistics = dataSetStatistics(data_dir, 128, num_data)
+data_mean = statistics[0].tolist()
+data_std = statistics[1].tolist()
 
-    if normalize == True:
-        print('normalizing data:')
-        print('mean:', data_mean)
-        print('std:', data_std)
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Normalize((data_mean[0], data_mean[1], data_mean[2]),
-                                                             (data_std[0], data_std[1], data_std[2]))])
-    else:
-        transform = transforms.Compose([transforms.ToTensor()])
+if normalize == True:
+    print('normalizing data:')
+    print('mean:', data_mean)
+    print('std:', data_std)
+    transform = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Normalize((data_mean[0], data_mean[1], data_mean[2]),
+                                                         (data_std[0], data_std[1], data_std[2]))])
+else:
+    transform = transforms.Compose([transforms.ToTensor()])
 
-    # Put images into dataset
-    img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
-    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
-
-
-    # Instantiate and load model
-    if style == 'conv':
-        model = ConvAutoencoder()
-    elif style == 'dense':
-        model = DenseAutoencoder(input_size, feature_size)  
-    elif style == 'conv_dense_out':
-        model = ConvAutoencoder_dense_out(feature_size)
-    elif style == 'conv_1x1':
-        model = ConvAutoencoder_conv1x1()
-    elif style == 'conv_1x1_test':
-        model = ConvAutoencoder_conv1x1_layertest()
-    elif style == 'conv_deeper':
-        model = ConvAutoencoder_deeper1()
+# Put images into dataset
+img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
 
 
-    # Loading the trained model
-    # Converting the trained model if trained to be usable on the cpu
-    # if gpu is unavailable and the model was trained using gpus
-    if gpu_to_cpu == True:
-        # original saved file with DataParallel
-        state_dict = torch.load(model_file, map_location='cpu')
-        # create new OrderedDict that does not contain `module.`
-        from collections import OrderedDict
-
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]  # remove `module.`
-            new_state_dict[name] = v
-        # load params
-        model.load_state_dict(new_state_dict)
-
-    else:
-        # if there are multiple GPUs, split the batch to different GPUs
-        if torch.cuda.device_count() > 1:
-            print("Using "+str(torch.cuda.device_count())+" GPUs...")
-            model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(model_file))
+# Instantiate and load model
+if style == 'conv':
+    model = ConvAutoencoder()
+elif style == 'dense':
+    model = DenseAutoencoder(input_size, feature_size)
+elif style == 'conv_dense_out':
+    model = ConvAutoencoder_dense_out(feature_size)
+elif style == 'conv_1x1':
+    model = ConvAutoencoder_conv1x1()
+elif style == 'conv_1x1_test':
+    model = ConvAutoencoder_conv1x1_layertest()
+elif style == 'conv_deeper':
+    model = ConvAutoencoder_deeper1()
 
 
-    # Reconstructing images and plotting the root mean square error
-    if rmse_bool == True:
-        reconstruction_lst = []
-        print('Forming reconstruction images...')
-        for i in range(dataset.__len__()):
-            image, name = dataset[i]
-            reconstruct_image = inference(device, image.unsqueeze(0), model)    # create reconstructed image using model
-            recon_detach = reconstruct_image.detach()
-            recon_cpu = recon_detach.cpu()
-            recon_numpy = recon_cpu.numpy()     # convert image to numpy array for easier calculations
-            recon_numpy = np.squeeze(recon_numpy, axis=0)   # remove first dimension of array i.e. (1,3,256,256) -> (3,256,256)
-            reconstruction_lst.append(recon_numpy)
+# Loading the trained model
+# Converting the trained model if trained to be usable on the cpu
+# if gpu is unavailable and the model was trained using gpus
 
-        original_lst = []
-        file_name_lst = []
-        print('Extracting original images...')
-        for tensor_name_tuple in dataset:
-            og_img = tensor_name_tuple[0].numpy()   # create list of original images as numpy arrays
-            original_lst.append(og_img)
-            file_name = tensor_name_tuple[1]    # create list of file names
-            file_name_lst.append(file_name)
+if gpu_to_cpu == True:
+    # original saved file with DataParallel
+    state_dict = torch.load(model_file, map_location='cpu')
+    # create new OrderedDict that does not contain `module.`
+    from collections import OrderedDict
 
-        N = 1
-        for dim in original_lst[0].shape:   # determine N for root mean square error
-            N *= dim
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        name = k[7:]  # remove `module.`
+        new_state_dict[name] = v
+    # load params
+    model.load_state_dict(new_state_dict)
 
-        print('Calculating root mean squared error...')
-        rmse_lst = []
-        for i in range(len(original_lst)):
-            RMSE = ((np.sum((original_lst[i] - reconstruction_lst[i]) ** 2) / N) ** .5)     # calculate rmse
-            rmse_lst.append(RMSE)
-
-        # Plot histogram of root mean squared errors between reconstructed images and original images
-        print('Plotting root mean squared error...')
-        plt.hist(np.asarray(rmse_lst), bins=30)
-        plt.ylabel('Number of Image Pairs')
-        plt.xlabel('Root Mean Squared')
-        plt.title('RMSE  —  ' + model_file)
-        plt.savefig('./images/' + 'rmse.png')
-        # plt.show()
-
-        # Plot images before and after reconstruction
-        print('Constructing figures before and after reconstruction...')
-
-        # create a random list of indices to select images from dataset
-        # to compare to their respective reconstructed images
-        random_index_lst = []
-        for i in range(img_count):
-            random_index_lst.append(random.randint(0, dataset.__len__()-1))
+else:
+    # if there are multiple GPUs, split the batch to different GPUs
+    if torch.cuda.device_count() > 1:
+        print("Using "+str(torch.cuda.device_count())+" GPUs...")
+        model = nn.DataParallel(model)
+    model.load_state_dict(torch.load(model_file))
 
 
-        for index in random_index_lst:
-            fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
-            ax1.imshow(np.transpose(original_lst[index], (1, 2, 0)))
-            ax1.set_title('Original Normalized Image  —  ' + file_name_lst[index])
-            ax2.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
-            ax2.set_title('Reconstructed Image  —  ' + file_name_lst[index])
-            # show both figures
-            plt.savefig('./images/' + 'reconstructed_' + file_name_lst[index].split('.')[0] + '.png')
-            plt.imshow(np.transpose(original_lst[index], (1, 2, 0)))
-            plt.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
-            # plt.show()
+
+def reconstruction_creation(index, dataset):
+
+    image, name = dataset[index]
+    reconstruct_image = inference(device, image.unsqueeze(0), model)  # create reconstructed image using model
+    recon_detach = reconstruct_image.detach()
+    recon_cpu = recon_detach.cpu()
+    recon_numpy = recon_cpu.numpy()  # convert image to numpy array for easier calculations
+    recon_numpy = np.squeeze(recon_numpy, axis=0)
+
+    criterion = nn.MSELoss()
+    loss = str(criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu()).item())
+
+    return recon_numpy, loss
 
 
-    else:
-        random_index_lst = []
-        print('Constructing figures before and after reconstruction...')
-        for i in range(img_count):
-            random_index_lst.append(random.randint(0, dataset.__len__() - 1))   # create random list of indices
+def original_image_extraction(index, dataset):
+    image, name = dataset[index]
+    og_img = image.numpy()  # create list of original images as numpy arrays
+    file_name = name  # create list of file names
 
-        for index in random_index_lst:
-            image, file_name = dataset[index]
-            # calulate the input size (flattened)
-            # print('name of input:', file_name)
-            # image_shape = image.shape
-            # print('shape of input:', image_shape)
-            # input_size = image_shape[0] * image_shape[1] * image_shape[2]
-            # print('flattened input size:', input_size)
+    return og_img, file_name
 
-            # Get the reconstructed image
-            reconstruct_image = inference(device, image.unsqueeze(0), model)
-            # print('shape of reconstructed image:', reconstruct_image.shape)
-            # print(reconstruct_image)
 
-            # Measure the loss between the 2 images
-            criterion = nn.MSELoss()
-            loss = criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu())
-            print('loss between before and after:', loss)
+# Reconstructing images and plotting the root mean square error
+print('Calculating root mean squared error...')
 
-            # plot images before and after reconstruction
-            fig, (ax1, ax2) = plt.subplots(nrows=1,ncols=2,figsize=(14, 7))
-            ax1.imshow(np.transpose(image.numpy(), (1,2,0)))
-            ax1.set_title('Original Image  —  ' + file_name)
-            ax2.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(),(1,2,0)))
-            ax2.set_title('Reconstructed Image  —  ' + file_name)
-            # show both figures
-            # plt.savefig('./images/' + 'reconstruct_' + filename.split('.')[0] + '.png')
-            plt.imshow(np.transpose(image.numpy(), (1, 2, 0)))
-            plt.imshow(np.transpose(reconstruct_image.squeeze().detach().cpu().numpy(), (1, 2, 0)))
-            #plt.show()
+rmse_lst = []
+for index in range(int(dataset.__len__()/2.)):
+    recon_img = reconstruction_creation(index, dataset)[0]
+    og_image = original_image_extraction(index, dataset)[0]
+
+    N = 1
+    for dim in og_image.shape:   # determine N for root mean square error
+        N *= dim
+
+    rmse = ((np.sum((og_image - recon_img) ** 2) / N) ** .5)     # calculate rmse
+    rmse_lst.append(rmse)
+
+
+# Plot histogram of root mean squared errors between reconstructed images and original images
+print('Plotting root mean squared error...')
+plt.hist(np.asarray(rmse_lst), bins=30)
+plt.ylabel('Number of Image Pairs')
+plt.xlabel('Root Mean Squared')
+plt.title('RMSE  —  ' + model_file)
+plt.savefig('./images/' + 'rmse.png')
+# plt.show()
+
+
+
+# Plot images before and after reconstruction
+print('Constructing figures before and after reconstruction...')
+
+# create a random list of indices to select images from dataset
+# to compare to their respective reconstructed images
+random_index_lst = []
+for i in range(img_count):
+    random_index_lst.append(random.randint(0, dataset.__len__()/2.0-1))
+print(random_index_lst)
+
+
+original_lst = []
+reconstruction_lst = []
+file_name_lst = []
+loss_lst = []
+for index in random_index_lst:
+    recon_img = reconstruction_creation(index, dataset)[0]
+    loss = reconstruction_creation(index, dataset)[1]
+    og_image = original_image_extraction(index, dataset)[0]
+    file_name = original_image_extraction(index, dataset)[1]
+    reconstruction_lst.append(recon_img)
+    original_lst.append(og_image)
+    file_name_lst.append(file_name)
+    loss_lst.append(loss)
+
+
+for index in range(len(file_name_lst)):
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
+    ax1.imshow(np.transpose(original_lst[index], (1, 2, 0)))
+    ax1.set_title('Original Normalized Image  —  ' + file_name_lst[index])
+    ax2.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
+    ax2.set_title('Reconstructed Image  —  ' + file_name_lst[index])
+    txt = 'Loss between before and after: ' + loss_lst[index]
+    plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
+    # show both figures
+    plt.savefig('./images/' + 'reconstructed_' + file_name_lst[index].split('.')[0] + '.png')
+    plt.imshow(np.transpose(original_lst[index], (1, 2, 0)))
+    plt.imshow(np.transpose(reconstruction_lst[index], (1, 2, 0)))
+    # plt.show()
