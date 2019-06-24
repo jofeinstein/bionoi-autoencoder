@@ -48,8 +48,10 @@ def dataSetStatistics(data_dir, batch_size, num_data):
             for f in listdir(update_data_dir):
                 if isfile(join(update_data_dir, f)):
                     img_list.append(item + '/' + f)
+    print(img_list)
 
-    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
+
+    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
     total = dataset.__len__()
     print('length of entire dataset:', total)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=16)
