@@ -193,7 +193,7 @@ plt.hist(np.asarray(rmse_lst), bins=30)
 plt.ylabel('Number of Image Pairs')
 plt.xlabel('Root Mean Squared')
 plt.title('RMSE  —  ' + model_file)
-plt.savefig('./images/' + 'rmse.png')
+plt.savefig('./images/' + model_file + 'rmse.png')
 # plt.show()
 
 
@@ -206,7 +206,6 @@ print('Constructing figures before and after reconstruction...')
 random_index_lst = []
 for i in range(img_count):
     random_index_lst.append(random.randint(0, dataset.__len__()/2.0-1))
-print(random_index_lst)
 
 
 original_lst = []
