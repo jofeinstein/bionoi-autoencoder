@@ -125,10 +125,9 @@ if __name__ == "__main__":
             update_data_dir = join(data_dir, item)
             for f in listdir(update_data_dir):
                 if isfile(join(update_data_dir, f)):
-                    img_list.append(f)
+                    img_list.append(item + '/' + f)
 
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
-
 
     if style == 'conv_1x1':
 
@@ -453,4 +452,4 @@ if __name__ == "__main__":
     list_plot(train_loss_history)
     base = os.path.splitext(model_file)[0]
     plt.savefig(base + '_loss.png')
-    plt.show()
+    # plt.show()
