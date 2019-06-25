@@ -48,7 +48,6 @@ def dataSetStatistics(data_dir, batch_size, num_data):
             for f in listdir(update_data_dir):
                 if isfile(join(update_data_dir, f)):
                     img_list.append(item + '/' + f)
-    print(img_list)
 
 
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
