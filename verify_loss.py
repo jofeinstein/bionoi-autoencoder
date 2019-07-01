@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from torch import nn
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset, inference
 from helper import imshow
 from utils import DenseAutoencoder
@@ -101,7 +101,15 @@ if __name__ == "__main__":
         transform = transforms.Compose([transforms.ToTensor()])
 
     # put images into dataset
-    img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+    img_list = []
+    for item in listdir(data_dir):
+        if isfile(join(data_dir, item)):
+            img_list.append(item)
+        elif isdir(join(data_dir, item)):
+            update_data_dir = join(data_dir, item)
+            for f in listdir(update_data_dir):
+                if isfile(join(update_data_dir, f)):
+                    img_list.append(item + '/' + f)
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
     # create dataloader
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=32)

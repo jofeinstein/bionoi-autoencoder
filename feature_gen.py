@@ -10,8 +10,9 @@ import numpy as np
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 from torch import nn
+import os
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset, ConvAutoencoder_conv1x1
 from helper import imshow
 from dataset_statistics import dataSetStatistics
@@ -48,6 +49,10 @@ def getArgs():
                         default='./log/conv_1x1.pt',
                         required=False,
                         help='directory of trained model')
+    parser.add_argument('-gpu_to_cpu',
+                        default=False,
+                        required=False,
+                        help='whether to reconstruct image using model made with gpu on a cpu')
     return parser.parse_args()
 
 def feature_vec_gen(device, model, dataset, feature_dir):
@@ -59,10 +64,13 @@ def feature_vec_gen(device, model, dataset, feature_dir):
         image, file_name = dataset[i]
         file_name = file_name.split('.')
         file_name = file_name[0]
+        directory_name = file_name.split('/')[0]
         image = image.to(device) # send to gpu
-        feature_vec = model.encode_vec(image.unsqueeze(0)) # add one dimension
-        #print('shape of feature vector:', feature_vec.shape)
-        pickle_file = open(feature_dir + file_name + '.pickle','wb')
+        feature_vec = model.module.encode_vec(image.unsqueeze(0)) # add one dimension
+        # print('shape of feature vector:', feature_vec.shape)
+        if not os.path.exists(feature_dir + directory_name):
+            os.makedirs(feature_dir + directory_name)
+        pickle_file = open(feature_dir + file_name + '.pickle', 'wb')
         pickle.dump(feature_vec, pickle_file)
 
 if __name__ == "__main__":
@@ -74,24 +82,41 @@ if __name__ == "__main__":
     num_data = args.num_data
     model = args.model
     model_file = args.model_file
+    gpu_to_cpu = args.gpu_to_cpu
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print('Current device: '+str(device))   
+    print('Current device: '+str(device))
 
+    if gpu_to_cpu == True:
+        # original saved file with DataParallel
+        state_dict = torch.load(model_file, map_location='cpu')
+        # create new OrderedDict that does not contain `module.`
+        from collections import OrderedDict
 
-    # if there are multiple GPUs, split a batch to different GPUs
-    if torch.cuda.device_count() > 1:
-        print("Using "+str(torch.cuda.device_count())+" GPUs...")
-        model = nn.DataParallel(model)
-    model.load_state_dict(torch.load(model_file))
-    print(model)
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k[7:]  # remove `module.`
+            new_state_dict[name] = v
+        # load params
+        model.load_state_dict(new_state_dict)
+
+    else:
+        # if there are multiple GPUs, split the batch to different GPUs
+        if torch.cuda.device_count() > 1:
+            print("Using " + str(torch.cuda.device_count()) + " GPUs...")
+            model = nn.DataParallel(model)
+        model.load_state_dict(torch.load(model_file))
+
     #--------------------model configuration ends--------------------------
 
     # data configuration
     statistics = dataSetStatistics(data_dir, 128, num_data)
     data_mean = statistics[0].tolist()
     data_std = statistics[1].tolist()
+
+    #data_mean = [0.5834683179855347, 0.6131182312965393, 0.543856143951416]
+    #data_std = [0.08377586305141449, 0.09421063959598541, 0.09517180174589157]
 
     if normalize == True:
         print('normalizing data:')
@@ -102,7 +127,17 @@ if __name__ == "__main__":
                                                              (data_std[0], data_std[1], data_std[2]))])
     else:
         transform = transforms.Compose([transforms.ToTensor()])
-    img_list = [f for f in listdir(data_dir)] # put images into dataset
+
+    img_list = []
+    for item in listdir(data_dir):
+        if isfile(join(data_dir, item)):
+            img_list.append(item)
+        elif isdir(join(data_dir, item)):
+            update_data_dir = join(data_dir, item)
+            for f in listdir(update_data_dir):
+                if isfile(join(update_data_dir, f)):
+                    img_list.append(item + '/' + f)
+
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
     image, file_name = dataset[index]
     # calulate the input size (flattened)

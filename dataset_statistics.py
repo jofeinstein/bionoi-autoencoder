@@ -33,11 +33,11 @@ def getArgs():
 
 def dataSetStatistics(data_dir, batch_size, num_data):
     # Detect if we have a GPU available
-    #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    #print('Current device: '+str(device))
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # print('Current device: '+str(device))
 
     transform = transforms.Compose([transforms.ToTensor()])
-    #img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+    # img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
 
     img_list = []
     for item in listdir(data_dir):
@@ -48,7 +48,6 @@ def dataSetStatistics(data_dir, batch_size, num_data):
             for f in listdir(update_data_dir):
                 if isfile(join(update_data_dir, f)):
                     img_list.append(item + '/' + f)
-    print(img_list)
 
 
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
@@ -79,4 +78,4 @@ if __name__ == "__main__":
     data_dir = args.data_dir
     batch_size = args.batch_size
     num_data = args.num_data
-    dataSetStatistics(data_dir, batch_size,num_data)
+    dataSetStatistics(data_dir, batch_size, num_data)

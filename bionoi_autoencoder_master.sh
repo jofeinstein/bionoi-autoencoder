@@ -6,6 +6,7 @@
 #PBS -A loni_bionoi01
 #PBS -j oe
 
+
 singularity shell -B /project,/work,/var --nv /home/admin/singularity/pytorch-1.0.0-dockerhub-v3.simg
 unset PYTHONPATH
 unset PYTHONHOME
@@ -15,10 +16,13 @@ export LD_LIBRARY_PATH=/usr/local/onnx/onnx:/usr/local/nvidia/lib:/usr/local/nvi
 mkdir -p /var/scratch/jfeins1
 
 tar -xzf /work/jfeins1/bae-images-4M.tar.gz -C /var/scratch/jfeins1/
+tar -xzf /work/jfeins1/Bindingsite-images.tar.gz -C /var/scratch/jfeins1/
 
 cd /work/jfeins1/bionoi_autoencoder_modified/
 
-python autoencoder_general.py -data_dir /var/scratch/jfeins1/reconstruction_img/ -model_file ./log/conv1x1-4M-batch512.pt -style conv_1x1 -batch_size 512 > progress-4M.log 2>&1
+python autoencoder_general.py -data_dir /var/scratch/jfeins1/bae-images-4M/ -model_file ./log/conv1x1-4M-batch512.pt -style conv_1x1 -batch_size 512 > progress-4M.log 2>&1
+python reconstruct.py -data_dir /var/scratch/jfeins1/bae-images-4M/ -model ./log/conv1x1-4M-batch512.pt -style conv_1x1 > progress-reconstruct-4M.log 2>&1
+python feature_gen.py -data_dir /var/scratch/jfeins1/Bindingsite-images/ -feature_dir /work/jfeins1/bionoi_autoencoder_modified/Bindingsite-feature/ -model_file ./log/conv1x1-4M-batch512.pt > progress-feature-4M.log 2>&1
 
 cd /var/scratch/
 

@@ -12,7 +12,7 @@ from torch import nn
 from os import listdir
 import random
 import os.path
-from os.path import isfile, join
+from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset, inference
 from helper import imshow
 from utils import DenseAutoencoder 
@@ -25,11 +25,6 @@ from dataset_statistics import dataSetStatistics
 
 def getArgs():
     parser = argparse.ArgumentParser('python')
-    parser.add_argument('-index',
-                        default=0,
-                        type=int,
-                        required=False,
-                        help='index of image')
     parser.add_argument('-data_dir',
                         default='../bae-data-images/',
                         required=False,
@@ -71,7 +66,6 @@ def getArgs():
 
 if __name__ == "__main__":
     args = getArgs()
-    index = args.index
     data_dir = args.data_dir
     style = args.style
     feature_size = args.feature_size
@@ -88,9 +82,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Current device: '+str(device))
 
 # Normalizing data and transforming images to tensors
-statistics = dataSetStatistics(data_dir, 128, num_data)
-data_mean = statistics[0].tolist()
-data_std = statistics[1].tolist()
+#statistics = dataSetStatistics(data_dir, 128, num_data)
+#data_mean = statistics[0].tolist()
+#data_std = statistics[1].tolist()
+
+data_mean = [0.5898393392562866, 0.6141121983528137, 0.5284017324447632]
+data_std =[0.08070343732833862, 0.09101060032844543, 0.08843237906694412]
 
 if normalize == True:
     print('normalizing data:')
@@ -103,7 +100,16 @@ else:
     transform = transforms.Compose([transforms.ToTensor()])
 
 # Put images into dataset
-img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
+img_list = []
+for item in listdir(data_dir):
+    if isfile(join(data_dir, item)):
+        img_list.append(item)
+    elif isdir(join(data_dir, item)):
+        update_data_dir = join(data_dir, item)
+        for f in listdir(update_data_dir):
+            if isfile(join(update_data_dir, f)):
+                img_list.append(item + '/' + f)
+
 dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
 
 
@@ -193,7 +199,7 @@ plt.hist(np.asarray(rmse_lst), bins=30)
 plt.ylabel('Number of Image Pairs')
 plt.xlabel('Root Mean Squared')
 plt.title('RMSE  —  ' + model_file)
-plt.savefig('./images/' + model_file + 'rmse.png')
+plt.savefig('./images/' + 'rmse.png')
 # plt.show()
 
 
@@ -205,7 +211,7 @@ print('Constructing figures before and after reconstruction...')
 # to compare to their respective reconstructed images
 random_index_lst = []
 for i in range(img_count):
-    random_index_lst.append(random.randint(0, dataset.__len__()/2.0-1))
+    random_index_lst.append(random.randint(0, dataset.__len__()-1))
 
 
 original_lst = []
