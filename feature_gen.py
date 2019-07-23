@@ -16,6 +16,7 @@ from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset, ConvAutoencoder_conv1x1
 from helper import imshow
 from dataset_statistics import dataSetStatistics
+import tarfile
 
 def getArgs():
     parser = argparse.ArgumentParser('python')
@@ -25,11 +26,11 @@ def getArgs():
                         required=False,
                         help='index of image')
     parser.add_argument('-data_dir',
-                        default='../bindingsite-img/',
+                        default='/work/jfeins1/resnet-binary-stripped',
                         required=False,
                         help='directory of training images')
     parser.add_argument('-feature_dir',
-                        default='../bindingsite-feature/',
+                        default='/work/jfeins1/features/',
                         required=False,
                         help='directory of generated features')                      
     parser.add_argument('-normalize',
@@ -46,13 +47,23 @@ def getArgs():
                         required=False,
                         help='the model of autoencoder to generate feature vectors with')
     parser.add_argument('-model_file',
-                        default='./log/conv_1x1.pt',
+                        default='./conv1x1-4M-batch512.pt',
                         required=False,
                         help='directory of trained model')
     parser.add_argument('-gpu_to_cpu',
                         default=False,
                         required=False,
                         help='whether to reconstruct image using model made with gpu on a cpu')
+    parser.add_argument('-tar_dir',
+                        default='/work/jfeins1/resnet-binary.tar.gz',
+                        required=False,
+                        help='directory of tarfile')
+
+    parser.add_argument('-tar_extract_path',
+                        default='/var/scratch/jfeins1/',
+                        required=False,
+                        help='directory to extract tarfile to')
+
     return parser.parse_args()
 
 def feature_vec_gen(device, model, dataset, feature_dir):
@@ -77,76 +88,115 @@ if __name__ == "__main__":
     args = getArgs()
     index = args.index
     data_dir = args.data_dir
-    feature_dir = args.feature_dir
+    #feature_dir = args.feature_dir
     normalize = args.normalize
     num_data = args.num_data
     model = args.model
-    model_file = args.model_file
-    gpu_to_cpu = args.gpu_to_cpu
+    #model_file = args.model_file
+    #gpu_to_cpu = args.gpu_to_cpu
+    #tar_dir = args.tar_dir
+    #tar_extract_path = args.tar_extract_path
+
+    fold_lst = ['fold0', 'fold1', 'fold2', 'fold3', 'fold4']
+    final_val_acc_history = []
+    final_val_loss_history = []
+    final_train_acc_history = []
+    final_train_loss_history = []
+
+
+    fold = 5
+    model_file = '/home/jfeinst/Projects/bionoi_autoencoder_modified/conv1x1-4M-batch512.pt'
+    gpu_to_cpu = True
+    tar_dir = '/home/jfeinst/Desktop/voronoi_diagrams/test.tar.gz'
+    tar_extract_path = '/home/jfeinst/Desktop/'
+    tar_name = tar_dir.split('/')[-1].split('.')[0]
+    feature_dir = '/home/jfeinst/Desktop/'
+
+    if not os.path.exists(feature_dir):
+        os.makedirs(feature_dir)
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Current device: '+str(device))
 
-    if gpu_to_cpu == True:
-        # original saved file with DataParallel
-        state_dict = torch.load(model_file, map_location='cpu')
-        # create new OrderedDict that does not contain `module.`
-        from collections import OrderedDict
+    for i in range(fold):
+        print('--Fold {}--'.format(i + 1))
 
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]  # remove `module.`
-            new_state_dict[name] = v
-        # load params
-        model.load_state_dict(new_state_dict)
+        print('Extracting tarball...')
 
-    else:
-        # if there are multiple GPUs, split the batch to different GPUs
-        if torch.cuda.device_count() > 1:
-            print("Using " + str(torch.cuda.device_count()) + " GPUs...")
-            model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(model_file))
+        # Untar tarball containing data
+        with tarfile.open(tar_dir) as tar:
+            subdir_and_files = [tarinfo for tarinfo in tar.getmembers() if
+                                tarinfo.name.startswith(tar_name + '/' + fold_lst[i])]
+            tar.extractall(members=subdir_and_files, path=tar_extract_path)
 
-    #--------------------model configuration ends--------------------------
 
-    # data configuration
-    statistics = dataSetStatistics(data_dir, 128, num_data)
-    data_mean = statistics[0].tolist()
-    data_std = statistics[1].tolist()
+        '''if gpu_to_cpu == True:
+            # original saved file with DataParallel
+            print('GPU to CPU true...')
+            state_dict = torch.load(model_file, map_location='cpu')
+            # create new OrderedDict that does not contain `module.`
+            from collections import OrderedDict
 
-    #data_mean = [0.5834683179855347, 0.6131182312965393, 0.543856143951416]
-    #data_std = [0.08377586305141449, 0.09421063959598541, 0.09517180174589157]
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:]  # remove `module.`
+                new_state_dict[name] = v
+            # load params
+            model.load_state_dict(new_state_dict)
 
-    if normalize == True:
-        print('normalizing data:')
-        print('mean:', data_mean)
-        print('std:', data_std)
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Normalize((data_mean[0], data_mean[1], data_mean[2]),
-                                                             (data_std[0], data_std[1], data_std[2]))])
-    else:
-        transform = transforms.Compose([transforms.ToTensor()])
+        else:
+            # if there are multiple GPUs, split the batch to different GPUs
+            if torch.cuda.device_count() > 1:
+                print("Using " + str(torch.cuda.device_count()) + " GPUs...")
+                model = nn.DataParallel(model)
+            model.load_state_dict(torch.load(model_file))'''
 
-    img_list = []
-    for item in listdir(data_dir):
-        if isfile(join(data_dir, item)):
-            img_list.append(item)
-        elif isdir(join(data_dir, item)):
-            update_data_dir = join(data_dir, item)
-            for f in listdir(update_data_dir):
-                if isfile(join(update_data_dir, f)):
-                    img_list.append(item + '/' + f)
+        #--------------------model configuration ends--------------------------
 
-    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)  
-    image, file_name = dataset[index]
-    # calulate the input size (flattened)
-    print('name of input:', file_name)
-    image_shape = image.shape
-    print('shape of input:', image_shape)
 
-    # generate features for images in data_dir
-    model = model.to(device)
-    model.eval() # don't cache the intermediate values
-    print('generating feature vectors...')
-    feature_vec_gen(device, model, dataset, feature_dir)
+        for phase in ['train', 'val']:
+
+            data_dir = tar_extract_path + tar_name + '/' + fold_lst[i] + '/' + phase + '/'
+
+            # data configuration
+            statistics = dataSetStatistics(data_dir, 128, num_data)
+            data_mean = statistics[0].tolist()
+            data_std = statistics[1].tolist()
+
+            # data_mean = [0.5834683179855347, 0.6131182312965393, 0.543856143951416]
+            # data_std = [0.08377586305141449, 0.09421063959598541, 0.09517180174589157]
+
+            if normalize == True:
+                print('normalizing data:')
+                print('mean:', data_mean)
+                print('std:', data_std)
+                transform = transforms.Compose([transforms.ToTensor(),
+                                                transforms.Normalize((data_mean[0], data_mean[1], data_mean[2]),
+                                                                     (data_std[0], data_std[1], data_std[2]))])
+            else:
+                transform = transforms.Compose([transforms.ToTensor()])
+
+
+            img_list = []
+            for item in listdir(data_dir):
+                if isfile(join(data_dir, item)):
+                    img_list.append(item)
+                elif isdir(join(data_dir, item)):
+                    update_data_dir = join(data_dir, item)
+                    for f in listdir(update_data_dir):
+                        if isfile(join(update_data_dir, f)):
+                            img_list.append(item + '/' + f)
+
+            dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
+            image, file_name = dataset[index]
+            # calulate the input size (flattened)
+            print('name of input:', file_name)
+            image_shape = image.shape
+            print('shape of input:', image_shape)
+
+            # generate features for images in data_dir
+            model = model.to(device)
+            model.eval() # don't cache the intermediate values
+            print('generating feature vectors...')
+            feature_vec_gen(device, model, dataset, feature_dir + fold_lst[i])
