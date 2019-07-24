@@ -40,15 +40,19 @@ def dataSetStatistics(data_dir, batch_size, num_data):
     # img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
 
     img_list = []
-    for item in listdir(data_dir):
-        if isfile(join(data_dir, item)):
+    for item in listdir(data_dir):  # /var/scratch/jfeins1/resnet-binary/fold0/train/    item= 1 or 3
+        if isfile(join(data_dir, item)): # /var/scratch/jfeins1/resnet-binary/fold0/train/1/ FALSE
             img_list.append(item)
-        elif isdir(join(data_dir, item)):
+        elif isdir(join(data_dir, item)):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/ TRUE
             update_data_dir = join(data_dir, item)
-            for f in listdir(update_data_dir):
-                if isfile(join(update_data_dir, f)):
+            for f in listdir(update_data_dir): # /var/scratch/jfeins1/resnet-binary/fold0/train/1/    f= 5iune00 or 3ir5a00
+                if isfile(join(update_data_dir, f)): # /var/scratch/jfeins1/resnet-binary/fold0/train/1/5iune00 FALSE
                     img_list.append(item + '/' + f)
-
+                elif isdir(join(update_data_dir, f)):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/5iune00 TRUE
+                    deeper_data_dir = join(update_data_dir, f) # deeper = /var/scratch/jfeins1/resnet-binary/fold0/train/1/5iune00
+                    for y in listdir(deeper_data_dir):
+                        if isfile(join(deeper_data_dir, y)):
+                            img_list.append(item + '/' + f + '/' + y)
 
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
     total = dataset.__len__()
