@@ -14,7 +14,6 @@ import random
 import os.path
 from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset, inference
-from helper import imshow
 from utils import DenseAutoencoder 
 from utils import ConvAutoencoder
 from utils import ConvAutoencoder_dense_out
@@ -78,16 +77,12 @@ if __name__ == "__main__":
 
 # Detect if we have a GPU available
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#device = torch.device("cpu")
 print('Current device: '+str(device))
 
 # Normalizing data and transforming images to tensors
-#statistics = dataSetStatistics(data_dir, 128, num_data)
-#data_mean = statistics[0].tolist()
-#data_std = statistics[1].tolist()
-
-data_mean = [0.5898393392562866, 0.6141121983528137, 0.5284017324447632]
-data_std =[0.08070343732833862, 0.09101060032844543, 0.08843237906694412]
+statistics = dataSetStatistics(data_dir, 128, num_data)
+data_mean = statistics[0].tolist()
+data_std = statistics[1].tolist()
 
 if normalize == True:
     print('normalizing data:')
@@ -106,9 +101,14 @@ for item in listdir(data_dir):
         img_list.append(item)
     elif isdir(join(data_dir, item)):
         update_data_dir = join(data_dir, item)
-        for f in listdir(update_data_dir):
+        for f in listdir( update_data_dir):
             if isfile(join(update_data_dir, f)):
                 img_list.append(item + '/' + f)
+            elif isdir(join(update_data_dir, f)):
+                deeper_data_dir = join(update_data_dir, f)
+                for y in listdir(deeper_data_dir):
+                    if isfile(join(deeper_data_dir, y)):
+                        img_list.append(item + '/' + f + '/' + y)
 
 dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
 
@@ -155,21 +155,23 @@ else:
 
 
 def reconstruction_creation(index, dataset):
+    '''create reconstructed image and calculate loss between original and reconstructed image'''
 
     image, name = dataset[index]
     reconstruct_image = inference(device, image.unsqueeze(0), model)  # create reconstructed image using model
     recon_detach = reconstruct_image.detach()
-    recon_cpu = recon_detach.cpu()
+    recon_cpu = recon_detach.cpu() # send to cpu
     recon_numpy = recon_cpu.numpy()  # convert image to numpy array for easier calculations
     recon_numpy = np.squeeze(recon_numpy, axis=0)
 
     criterion = nn.MSELoss()
-    loss = str(criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu()).item())
+    loss = str(criterion(image.unsqueeze(0).cpu(), reconstruct_image.cpu()).item()) # calculate loss
 
     return recon_numpy, loss
 
 
 def original_image_extraction(index, dataset):
+    '''extraxt the original image and file name from dataset to plot alongside reconstructed image'''
     image, name = dataset[index]
     og_img = image.numpy()  # create list of original images as numpy arrays
     file_name = name  # create list of file names
@@ -180,8 +182,9 @@ def original_image_extraction(index, dataset):
 # Reconstructing images and plotting the root mean square error
 print('Calculating root mean squared error...')
 
+# only calculating rmse for half of dataset due to the size.
 rmse_lst = []
-for index in range(int(dataset.__len__()/2.)):
+for index in range(int(dataset.__len__()/2.)): # remove '/.2' to calculate rmse for every img in dataset
     recon_img = reconstruction_creation(index, dataset)[0]
     og_image = original_image_extraction(index, dataset)[0]
 
@@ -218,7 +221,7 @@ original_lst = []
 reconstruction_lst = []
 file_name_lst = []
 loss_lst = []
-for index in random_index_lst:
+for index in random_index_lst: # extract and create corresponding original and reconstructed images for visual tests
     recon_img = reconstruction_creation(index, dataset)[0]
     loss = reconstruction_creation(index, dataset)[1]
     og_image = original_image_extraction(index, dataset)[0]
@@ -229,7 +232,7 @@ for index in random_index_lst:
     loss_lst.append(loss)
 
 
-for index in range(len(file_name_lst)):
+for index in range(len(file_name_lst)): # plotting the original image next to the reconstructed image with loss value
     fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(14, 7))
     ax1.imshow(np.transpose(original_lst[index], (1, 2, 0)))
     ax1.set_title('Original Normalized Image  —  ' + file_name_lst[index])

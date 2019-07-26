@@ -6,9 +6,9 @@ Autoencoders for bionoi datasets to generate feature vectors for future research
 ## Dependencies
 * Python 3.6.8
 * Numpy 1.16.2
-* Pytorch 1.0.1 (GPU version)
+* Pytorch 1.1 (if using GPU acceleration, use CUDA version)
 * Matplotlib 3.0.3
-* Torchvision 0.2.1
+* Torchvision 0.4
 * Scikit-image 0.15.0
 
 ## Files
@@ -22,16 +22,35 @@ usage: python dataset_statistics.py -data_dir ../bae-data-images/
   * classes for different kinds of autoencoders
   * the function used to train autoencoder. 
 
-* autoencoder_*_train.py: python scripts to train an autoencoder. * represents the name of the autoencoder to be trained. For example, autoencoder_conv_1x1_out_train.py trains the autoencoder architecture ConvAutoencoder_conv1x1 in utils.py.
+* autoencoder_general.py: python scripts to train an autoencoder. User can specify what style of autoencoder to use.
 ```
-usage: python autoencoder_conv_1x1_out_train.py -data_dir ../bae-data-images/ -model_file ./log/bionoi_autoencoder_conv.pt
+usage: python autoencoder_general.py -style conv_1x1 -data_dir ../bae-data-images/ -model_file ./log/bionoi_autoencoder_conv.pt
 ```
 
-* feature_gen.py: this script does 2 things:
-  * Given a trained model (model path is specified in code), a folder of input images and a specified index, plot the indexed image and its reconstruced image from autoencoder.
-  * Save the generated latent space feature vectors into a specified folder.
+* feature_gen.py: Save the generated latent space feature vectors into a specified folder.
 ```
 usage: python feature_gen.py -index 0 -data_dir ../bindingsite-img/ -feature_dir ../bindingsite-feature/
+```
+
+* feature_gen_foldloop.py: Save the generated latent space feature vectors into a specified folder. Data directory takes the structure shown in file. User must specify a tar file to extract data from. Tar structure must take the form of
+```
+tar
+│
+└───fold0
+│   │
+│   └───train
+│   │   │   file111.png
+│   │   │   ...
+│   │
+│   └───val
+│       │   file112.png
+│       │   ...
+│
+└───fold1
+    │   ...
+```
+```
+usage: python feature_gen_foldloop.py -feature_dir ../bindingsite-feature/ -tar_extract_path /var/scratch/test -tar_directory /work/user/test.tar.gz
 ```
 
 * feature_gen_bionoi.py: basically same as feature_gen.py, except that the input data directory is the bionoi dataset with a different folder structure instead of a single folder containing images:

@@ -14,13 +14,8 @@ import os.path
 from os import listdir
 from os.path import isfile, join, isdir
 import matplotlib.pyplot as plt
-from utils import UnsuperviseDataset, train
-from utils import DenseAutoencoder
-from utils import ConvAutoencoder
-from utils import ConvAutoencoder_dense_out
-from utils import ConvAutoencoder_conv1x1
-from utils import ConvAutoencoder_conv1x1_layertest
-from utils import ConvAutoencoder_deeper1
+from utils import UnsuperviseDataset, train, DenseAutoencoder, ConvAutoencoder, ConvAutoencoder_dense_out
+from utils import ConvAutoencoder_conv1x1, ConvAutoencoder_deeper1
 from helper import imshow, list_plot
 from dataset_statistics import dataSetStatistics
 
@@ -76,7 +71,7 @@ def getArgs():
     parser.add_argument('-style',
                         default='conv_1x1',
                         required=False,
-                        choices=['conv', 'dense', 'conv_dense_out', 'conv_1x1', 'conv_deeper', 'conv_1x1_test'],
+                        choices=['conv', 'dense', 'conv_dense_out', 'conv_1x1', 'conv_deeper'],
                         help='style of autoencoder')
 
     return parser.parse_args()
@@ -114,9 +109,8 @@ if __name__ == "__main__":
     else:
         transform = transforms.Compose([transforms.ToTensor()])
 
-    # put images into dataset
-    #img_list = [f for f in listdir(data_dir) if isfile(join(data_dir, f))]
-
+    # forming list of images. images may be upto 3 directories deep
+    # any deeper and the data_dir must be changed or another layer added to the code
     img_list = []
     for item in listdir(data_dir):
         if isfile(join(data_dir, item)):
@@ -126,6 +120,11 @@ if __name__ == "__main__":
             for f in listdir(update_data_dir):
                 if isfile(join(update_data_dir, f)):
                     img_list.append(item + '/' + f)
+                elif isdir(join(update_data_dir, f)):
+                    deeper_data_dir = join(update_data_dir, f)
+                    for y in listdir(deeper_data_dir):
+                        if isfile(join(deeper_data_dir, y)):
+                            img_list.append(item + '/' + f + '/' + y)
 
     dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
 
@@ -149,59 +148,6 @@ if __name__ == "__main__":
 
         # instantiate model
         model = ConvAutoencoder_conv1x1()
-        # if there are multiple GPUs, split the batch to different GPUs
-        if torch.cuda.device_count() > 1:
-            print("Using " + str(torch.cuda.device_count()) + " GPUs...")
-            model = nn.DataParallel(model)
-
-        # print model info
-        print(str(model))
-
-        # print the paramters to train
-        print('paramters to train:')
-        for name, param in model.named_parameters():
-            if param.requires_grad == True:
-                print(str(name))
-
-        # loss function
-        criterion = nn.MSELoss()
-
-        # optimizer
-
-        # optimizer = torch.optim.SGD(model.parameters(),lr=0.01,momentum=0.9,nesterov=True)
-
-        optimizer = optim.Adam(model.parameters(),
-                               lr=0.001,
-                               betas=(0.9, 0.999),
-                               eps=1e-10,
-                               weight_decay=0.0001,
-                               amsgrad=False)
-
-        learningRateScheduler = optim.lr_scheduler.MultiStepLR(optimizer,
-                                                               milestones=[10, 20],
-                                                               gamma=0.5)
-
-
-    elif style == 'conv_1x1_test':
-
-        # create dataloader
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=32)
-
-        # get some random training images to show
-        #dataiter = iter(dataloader)
-        #images, filename = dataiter.next()
-
-        # print(images.shape)
-        # imshow(torchvision.utils.make_grid(images))
-        # images = images.view(batch_size,-1)
-        # images = torch.reshape(images,(images.size(0),3,256,256))
-        # imshow(torchvision.utils.make_grid(images))
-
-        #image_shape = images.shape
-        #print('shape of input:', image_shape)
-
-        # instantiate model
-        model = ConvAutoencoder_conv1x1_layertest()
         # if there are multiple GPUs, split the batch to different GPUs
         if torch.cuda.device_count() > 1:
             print("Using " + str(torch.cuda.device_count()) + " GPUs...")

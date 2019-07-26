@@ -1,23 +1,18 @@
 """
 Given the index of an image, take this image and feed it to a trained autoencoder,
-then plot the original image and reconstructed image.
-This code is used to visually verify the correctness of the autoencoder
+then extract the feature vector.
 """
 import torch
 import argparse
 import pickle
 import numpy as np
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 from torch import nn
 import os
 from os import listdir
 from os.path import isfile, join, isdir
 from utils import UnsuperviseDataset, ConvAutoencoder_conv1x1
-from helper import imshow
 from dataset_statistics import dataSetStatistics
-import tarfile
-import shutil
 
 def getArgs():
     parser = argparse.ArgumentParser('python')
@@ -33,7 +28,7 @@ def getArgs():
     parser.add_argument('-feature_dir',
                         default='/work/jfeins1/features-binary/',
                         required=False,
-                        help='directory of generated features')                      
+                        help='directory of generated features')
     parser.add_argument('-normalize',
                         default=True,
                         required=False,
@@ -55,15 +50,7 @@ def getArgs():
                         default=False,
                         required=False,
                         help='whether to reconstruct image using model made with gpu on a cpu')
-    parser.add_argument('-tar_dir',
-                        default='/work/jfeins1/resnet-binary-stripped.tar.gz',
-                        required=False,
-                        help='directory of tarfile')
 
-    parser.add_argument('-tar_extract_path',
-                        default='/var/scratch/jfeins1/',
-                        required=False,
-                        help='directory to extract tarfile to')
 
     return parser.parse_args()
 
@@ -76,47 +63,29 @@ def feature_vec_gen(device, model, dataset, feature_dir):
         image, file_name = dataset[i]
         file_name = file_name.split('.')
         file_name = file_name[0]
-        directory_name = file_name.split('/')[0] + '/' + file_name.split('/')[1]
-        image = image.to(device) # send to gpu
-        feature_vec = model.module.encode_vec(image.unsqueeze(0)) # add one dimension
-        # feature_vec = model.encode_vec(image.unsqueeze(0))  # choose this line if running on cpu only machine
+        directory_name = file_name.split('/')[0]
+        image = image.to(device) # send to device
+        if device == 'cuda:0':
+            feature_vec = model.module.encode_vec(image.unsqueeze(0)) # add one dimension
+        else:
+            feature_vec = model.encode_vec(image.unsqueeze(0))  # choose this line if running on cpu only machine
         # print('shape of feature vector:', feature_vec.shape)
-        if not os.path.exists(feature_dir + '/' + directory_name):
-            os.makedirs(feature_dir + '/' + directory_name)
-        pickle_file = open(feature_dir + '/' + file_name + '.pickle', 'wb')
+        if not os.path.exists(feature_dir + directory_name):
+            os.makedirs(feature_dir + directory_name)
+        pickle_file = open(feature_dir + file_name + '.pickle', 'wb')
         pickle.dump(feature_vec, pickle_file)
 
 if __name__ == "__main__":
     args = getArgs()
     index = args.index
-    # data_dir = args.data_dir
+    data_dir = args.data_dir
     feature_dir = args.feature_dir
     normalize = args.normalize
     num_data = args.num_data
     model = args.model
     model_file = args.model_file
     gpu_to_cpu = args.gpu_to_cpu
-    tar_dir = args.tar_dir
-    tar_extract_path = args.tar_extract_path
 
-    fold_lst = ['fold0', 'fold1', 'fold2', 'fold3', 'fold4']
-
-    fold = 5
-    '''model_file = '/home/jfeinst/Projects/bionoi_autoencoder_modified/conv1x1-4M-batch512.pt'
-    #gpu_to_cpu = True
-    tar_dir = '/home/jfeinst/Projects/resnet-files/resnet-binary-stripped.tar.gz'
-    tar_extract_path = '/home/jfeinst/Desktop/'
-    tar_name = tar_dir.split('/')[-1].split('.')[0]
-    feature_dir = '/home/jfeinst/Desktop/features-binary/'''
-
-    '''model_file = '/home/jfeinst/Projects/bionoi_autoencoder_modified/conv1x1-4M-batch512.pt'
-    gpu_to_cpu = True
-    tar_dir = '/home/jfeinst/Projects/resnet-files/resnet-binary-stripped.tar.gz'
-    tar_extract_path = '/home/jfeinst/Desktop/'
-    tar_name = tar_dir.split('/')[-1].split('.')[0]
-    feature_dir = '/home/jfeinst/Desktop/features-test/'''
-
-    tar_name = tar_dir.split('/')[-1].split('.')[0]
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Current device: '+str(device))
@@ -145,71 +114,49 @@ if __name__ == "__main__":
 
         #--------------------model configuration ends--------------------------
 
-    for i in range(fold):
-        print('\n', '--Fold {}--'.format(i + 1))
+    # data configuration
+    statistics = dataSetStatistics(data_dir, 128, num_data)
+    data_mean = statistics[0].tolist()
+    data_std = statistics[1].tolist()
 
-        print('Extracting tarball...')
 
-        # Untar tarball containing data
-        with tarfile.open(tar_dir) as tar:
-            subdir_and_files = [tarinfo for tarinfo in tar.getmembers() if
-                                tarinfo.name.startswith(tar_name + '/' + fold_lst[i])]
-            tar.extractall(members=subdir_and_files, path=tar_extract_path)
+    if normalize == True:
+        print('normalizing data:')
+        print('mean:', data_mean)
+        print('std:', data_std)
+        transform = transforms.Compose([transforms.ToTensor(),
+                                        transforms.Normalize((data_mean[0], data_mean[1], data_mean[2]),
+                                                             (data_std[0], data_std[1], data_std[2]))])
+    else:
+        transform = transforms.Compose([transforms.ToTensor()])
 
-        for phase in ['train', 'val']:
+    # forming list of images. images may be upto 3 directories deep
+    # any deeper and the data_dir must be changed or another layer added to the code
+    img_list = []
+    for item in listdir(data_dir):
+        if isfile(join(data_dir, item)):
+            img_list.append(item)
+        elif isdir(join(data_dir, item)):
+            update_data_dir = join(data_dir, item)
+            for f in listdir( update_data_dir):
+                if isfile(join(update_data_dir, f)):
+                    img_list.append(item + '/' + f)
+                elif isdir(join(update_data_dir, f)):
+                    deeper_data_dir = join(update_data_dir, f)
+                    for y in listdir(deeper_data_dir):
+                        if isfile(join(deeper_data_dir, y)):
+                            img_list.append(item + '/' + f + '/' + y)
 
-            print(phase, '\n')
+    # create dataset
+    dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
+    image, file_name = dataset[index]
+    # calulate the input size (flattened)
+    print('name of input:', file_name)
+    image_shape = image.shape
+    print('shape of input:', image_shape)
 
-            data_dir = tar_extract_path + tar_name + '/' + fold_lst[i] + '/' + phase + '/'
-
-            # data configuration
-            statistics = dataSetStatistics(data_dir, 128, num_data)
-            data_mean = statistics[0].tolist()
-            data_std = statistics[1].tolist()
-
-            # data_mean = [0.5834683179855347, 0.6131182312965393, 0.543856143951416]
-            # data_std = [0.08377586305141449, 0.09421063959598541, 0.09517180174589157]
-
-            if normalize == True:
-                print('normalizing data:')
-                print('mean:', data_mean)
-                print('std:', data_std)
-                transform = transforms.Compose([transforms.ToTensor(),
-                                                transforms.Normalize((data_mean[0], data_mean[1], data_mean[2]),
-                                                                     (data_std[0], data_std[1], data_std[2]))])
-            else:
-                transform = transforms.Compose([transforms.ToTensor()])
-
-            img_list = []
-            for item in listdir(data_dir):  # /var/scratch/jfeins1/resnet-binary/fold0/train/    item= 1 or 3
-                if isfile(join(data_dir, item)):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/ FALSE
-                    img_list.append(item)
-                elif isdir(join(data_dir, item)):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/ TRUE
-                    update_data_dir = join(data_dir, item)
-                    for f in listdir( update_data_dir):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/    f= 5iune00 or 3ir5a00
-                        if isfile(join(update_data_dir, f)):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/5iune00 FALSE
-                            img_list.append(item + '/' + f)
-                        elif isdir(join(update_data_dir, f)):  # /var/scratch/jfeins1/resnet-binary/fold0/train/1/5iune00 TRUE
-                            deeper_data_dir = join(update_data_dir, f)  # deeper = /var/scratch/jfeins1/resnet-binary/fold0/train/1/5iune00
-                            for y in listdir(deeper_data_dir):
-                                if isfile(join(deeper_data_dir, y)):
-                                    img_list.append(item + '/' + f + '/' + y)
-
-            if not os.path.exists(feature_dir + fold_lst[i]):
-                os.makedirs(feature_dir + fold_lst[i])
-
-            dataset = UnsuperviseDataset(data_dir, img_list, transform=transform)
-            image, file_name = dataset[index]
-            # calulate the input size (flattened)
-            print('name of input:', file_name)
-            image_shape = image.shape
-            print('shape of input:', image_shape)
-
-            # generate features for images in data_dir
-            model = model.to(device)
-            model.eval() # don't cache the intermediate values
-            print('generating feature vectors...')
-            feature_vec_gen(device, model, dataset, feature_dir + fold_lst[i] + '/' + phase)
-
-        # Delete directory to make room for next fold
-        shutil.rmtree(tar_extract_path + tar_name)
+    # generate features for images in data_dir
+    model = model.to(device)
+    model.eval() # don't cache the intermediate values
+    print('generating feature vectors...')
+    feature_vec_gen(device, model, dataset, feature_dir)
