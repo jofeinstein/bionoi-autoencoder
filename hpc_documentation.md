@@ -23,7 +23,7 @@
 8. export LD_LIBRARY_PATH=/usr/local/onnx/onnx:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib64:/.singularity.d/libs
     * fixes an error: "undefined symbol: _ZTIN2at11TypeDefaultE....."
 
-9. cd ../../work/user/bionoi_autoencoder
+9. cd /work/user/bionoi_autoencoder
     * cd into directory containing the autoencoder.py
 
 10. python autoencoder_general.py -data_dir /work/jfeins1/bae-test-122k/ -model_file ./log/conv1x1-120k-batch512.pt -style conv_1x1 -batch_size 512
